@@ -19,12 +19,29 @@ router.get("/", asyncHandler(async (req, res) => {
   });
 }));
 
-// Trang Planet 3D
-router.get("/planet", (req, res) => {
-  res.render("planet", {
-    title: "Planet 3D"
-  });
-});
+// Trang planet: truy cập trực tiếp không cần chọn file
+router.get('/planet', asyncHandler(async (req, res) => {
+  const fileName = 'planet-scene.js';
+  const filePath = path.join(__dirname, "../public/js", fileName);
+  try {
+    await fs.access(filePath);
+    const code = await fs.readFile(filePath, 'utf-8');
+    return res.render('view_planet', {
+      fileName,
+      code,
+      title: `Chi tiết: ${fileName}`
+    });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      res.status(404).render('error', {
+        message: 'Không tìm thấy file planet-scene.js',
+        error: { status: 404 }
+      });
+    } else {
+      throw error;
+    }
+  }
+}));
 
 // Trang xem chi tiết code
 router.get("/view/:name", asyncHandler(async (req, res) => {

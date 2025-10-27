@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sản phẩm - JavaScript Gallery</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="main-content">
+        <div class="container">
+            <section class="products-section">
+                <h1>Tất cả sản phẩm JavaScript</h1>
+                
+                <% if (files.length === 0) { %>
+                    <div class="empty-state">
+                        <p>Chưa có sản phẩm JavaScript nào.</p>
+                        <p>Hãy thêm file .js vào thư mục /public/js</p>
+                    </div>
+                <% } else { %>
+                    <div class="product-grid">
+                        <% files.forEach(f => { %>
+                            <div class="product-card">
+                                <div class="product-preview">
+                                    <div class="code-icon">JS</div>
+                                </div>
+                                <div class="product-info">
+                                    <h3><%= f %></h3>
+                                    <p class="product-description">Đoạn mã JavaScript tương tác</p>
+                                    <div class="product-actions">
+                                        <a href="/view/<%= f %>" class="btn">Xem & Chạy</a>
+                                        <a href="/js/<%= f %>" download class="btn btn-secondary">Tải xuống</a>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }) %>
+                    </div>
+                <% } %>
+            </section>
+        </div>
+    </main>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

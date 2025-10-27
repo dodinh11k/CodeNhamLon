@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Gallery - Trang chủ</title>
+    <link rel="stylesheet" href="/css/style.css?v=1">
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main>
+        <h1>Chào mừng đến với JavaScript Gallery</h1>
+        <p class="hero-text">Khám phá bộ sưu tập các đoạn mã JavaScript thú vị và hữu ích</p>
+
+        <section class="products-section">
+            <h2>Sản phẩm JavaScript mới nhất</h2>
+            
+            <% if (files.length === 0) { %>
+                <div class="empty-state">
+                    <p>Chưa có sản phẩm JavaScript nào.</p>
+                    <p>Hãy thêm file .js vào thư mục /public/js</p>
+                </div>
+            <% } else { %>
+                <div class="product-grid">
+                    <% files.forEach(f => { %>
+                        <div class="product-card">
+                            <div class="product-info">
+                                <h3>JS - <%= f %></h3>
+                                <p class="product-description">Đoạn mã JavaScript tương tác</p>
+                                <div class="product-actions">
+                                    <a href="/view/<%= f %>" class="btn">Xem & Chạy</a>
+                                    <a href="/js/<%= f %>" download class="btn btn-secondary">Tải xuống</a>
+                                </div>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+            <% } %>
+        </section>
+    </main>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xem file: <%= fileName %></title>
+    <link rel="stylesheet" href="/css/style.css?v=1">
+</head>
+<body>
+    <%- include('partials/header') %>
+    <main>
+    <div class="container">
+        <h1>File: <%= fileName %></h1>
+        <a href="/" class="btn">← Về trang chủ</a>
+        
+        <div class="code-container">
+            <div class="controls">
+                <button onclick="startAnimation()" class="btn">Chạy Animation</button>
+                <button onclick="stopAnimation()" class="btn btn-secondary">Dừng Animation</button>
+                <a href="/js/<%= fileName %>" download class="btn">Tải code về</a>
+            </div>
+
+            <!-- Khu vực demo -->
+            <div class="demo-container">
+                <canvas id="pinkboard"></canvas>
+            </div>
+            
+            <!-- Hiển thị code -->
+            <h3>Mã nguồn:</h3>
+            <pre><code><%= code %></code></pre>
+        </div>
+    </div>
+
+    </main>
+    <%- include('partials/footer') %>
+
+    <script>
+        let animationRunning = false;
+        function startAnimation() {
+            if (!animationRunning) {
+                animationRunning = true;
+                initHeartAnimation();
+            }
+        }
+
+        function stopAnimation() {
+            if (animationRunning) {
+                location.reload();
+                animationRunning = false;
+            }
+        }
+    </script>
+    <script src="/js/heart-animation.js"></script>
+</body>
+</html>

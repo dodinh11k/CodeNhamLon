@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css?v=1">
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main>
+    <div class="container">
+      <h1><%= fileName %></h1>
+      <div class="controls">
+        <div class="control-card">
+          <label for="particles_length">Số hạt</label>
+          <input id="particles_length" type="number" min="10" max="2000" step="10" value="500">
+          <div class="hint">Tổng số hạt tối đa hiển thị</div>
+        </div>
+
+        <div class="control-card">
+          <label for="particles_duration">Thời lượng (giây)</label>
+          <input id="particles_duration" type="number" min="0.5" max="10" step="0.1" value="2">
+          <div class="hint">Thời gian sống của mỗi hạt</div>
+        </div>
+
+        <div class="control-card">
+          <label for="particles_velocity">Vận tốc</label>
+          <input id="particles_velocity" type="number" min="10" max="500" step="1" value="100">
+          <div class="hint">Tốc độ chuyển động của hạt (px/s)</div>
+        </div>
+
+        <div class="control-card">
+          <label for="particles_effect">Hiệu ứng</label>
+          <input id="particles_effect" type="number" min="-5" max="5" step="0.01" value="-0.75">
+          <div class="hint">Giá trị ảnh hưởng tới gia tốc (âm để giảm dần)</div>
+        </div>
+
+        <div class="control-card">
+          <label for="particles_size">Kích thước</label>
+          <input id="particles_size" type="number" min="4" max="200" step="1" value="30">
+          <div class="hint">Kích thước cơ bản của mỗi hạt (px)</div>
+        </div>
+
+        <div class="control-card">
+          <label for="heart_scale">Thu phóng trái tim</label>
+          <input id="heart_scale" type="number" min="0.2" max="3" step="0.1" value="1">
+          <div class="hint">Tỉ lệ thu nhỏ/phóng to trái tim (ví dụ 0.5 = nhỏ lại một nửa)</div>
+        </div>
+
+        <div class="controls-actions">
+          <button id="btnRun" class="btn">Chạy</button>
+          <button id="btnStop" class="btn btn-secondary">Dừng</button>
+          <button id="btnDownload" class="btn">Tải về</button>
+            <button id="btnZoomOut" class="btn">Thu nhỏ trái tim</button>
+            <button id="btnZoomIn" class="btn">Phóng to trái tim</button>
+        </div>
+          <div id="status" style="grid-column:1/-1; margin-top:8px; color:#333;"></div>
+      </div>
+
+      <!-- Orbiters controls -->
+      <div class="controls" style="margin-top:8px;">
+        <div class="control-card">
+          <label for="orbit_count">Số ảnh xoay</label>
+          <input id="orbit_count" type="number" min="0" max="50" step="1" value="0">
+          <div class="hint">Số lượng ảnh sẽ xoay quanh (0 = tắt)</div>
+        </div>
+        <div class="control-card">
+          <label for="orbit_radius">Bán kính (px)</label>
+          <input id="orbit_radius" type="number" min="10" max="800" step="1" value="120">
+          <div class="hint">Bán kính vòng quay quanh trái tim</div>
+        </div>
+        <div class="control-card">
+          <label for="orbit_speed">Tốc độ (rad/s)</label>
+          <input id="orbit_speed" type="number" min="0" max="10" step="0.01" value="1.0">
+          <div class="hint">Tốc độ góc quay (radian trên giây)</div>
+        </div>
+        <div class="control-card">
+          <label for="orbit_size">Kích thước ảnh (px)</label>
+          <input id="orbit_size" type="number" min="6" max="200" step="1" value="40">
+          <div class="hint">Kích thước hiển thị mỗi ảnh</div>
+        </div>
+        <div class="control-card">
+          <label for="orbit_images">URLs ảnh (phân tách bằng dấu ,)</label>
+          <input id="orbit_images" type="text" placeholder="https://.../img1.png, https://.../img2.png">
+          <div class="hint">Nhập đường dẫn ảnh, cách nhau bằng dấu phẩy</div>
+        </div>
+      </div>
+
+      <div class="demo-container">
+        <canvas id="pinkboard"></canvas>
+      </div>
+
+    </div>
+  </main>
+  <%- include('partials/footer') %>
+
+  <script>
+  // original code provided from server
+  const originalCode = <%- JSON.stringify(code) %>;
+
+    // helper: remove original var settings block from code
+    function stripOriginalSettings(src) {
+      const idx = src.indexOf('var settings');
+      if (idx === -1) return src;
+      // find the opening brace after var settings =
+      const start = src.indexOf('{', idx);
+      if (start === -1) return src;
+      let i = start;
+      let depth = 0;
+      for (; i < src.length; i++) {
+        if (src[i] === '{') depth++;
+        else if (src[i] === '}') {
+          depth--;
+          if (depth === 0) {
+            // find the semicolon after closing brace
+            let j = i+1;
+            while (j < src.length && /[\s\r\n;]/.test(src[j])) j++;
+            // return everything after j-1 (we want after the semicolon)
+            return src.slice(j);
+          }
+        }
+      }
+      return src;
+    }
+
+    function buildCode(particlesSettings, orbitSettings, heartScale) {
+      const fullSettings = { particles: particlesSettings, orbiters: orbitSettings, heartScale: heartScale || 1 };
+      const settingsSnippet = 'var settings = ' + JSON.stringify(fullSettings, null, 2) + '\n\n';
+      const rest = stripOriginalSettings(originalCode);
+      // Wrap the rest in an IIFE that returns the init function so it closes over `settings` safely
+      const wrapped = 'var __init__ = (function() {\n' + rest + '\n  return (typeof initHeartAnimation === "function") ? initHeartAnimation : null;\n})();\n';
+      return settingsSnippet + wrapped;
+    }
+
+    let runningScriptEl = null;
+
+    function runWithSettings() {
+      // stop previous
+      stopAnimation();
+      const particlesSettings = {
+        length: Number(document.getElementById('particles_length').value),
+        duration: Number(document.getElementById('particles_duration').value),
+        velocity: Number(document.getElementById('particles_velocity').value),
+        effect: Number(document.getElementById('particles_effect').value),
+        size: Number(document.getElementById('particles_size').value)
+      };
+      const orbitSettings = {
+        count: Number(document.getElementById('orbit_count').value),
+        radius: Number(document.getElementById('orbit_radius').value),
+        speed: Number(document.getElementById('orbit_speed').value),
+        size: Number(document.getElementById('orbit_size').value),
+        images: document.getElementById('orbit_images').value.split(',').map(s => s.trim()).filter(s => s)
+      };
+      const heartScale = Number(document.getElementById('heart_scale').value) || 1;
+      const code = buildCode(particlesSettings, orbitSettings, heartScale);
+      // inject script
+      const s = document.createElement('script');
+      s.type = 'text/javascript';
+      s.text = code + '\n//# sourceURL=generated-heart-animation.js';
+      document.body.appendChild(s);
+      runningScriptEl = s;
+      // update status
+      const statusEl = document.getElementById('status');
+      if (statusEl) statusEl.textContent = 'Script injected — initializing...';
+      // try to initialize and provide feedback
+        try {
+        console.log('__init__ available?', typeof __init__);
+        if (typeof __init__ === 'function') {
+          __init__();
+          if (statusEl) statusEl.textContent = 'Animation started.';
+        } else {
+          if (statusEl) statusEl.textContent = '__init__ not found after injection.';
+        }
+        // if orbit images provided, try to call preload if available
+        if (orbitSettings.images && orbitSettings.images.length && typeof preloadOrbitImages === 'function') {
+          if (statusEl) statusEl.textContent = 'Loading orbit images...';
+          preloadOrbitImages(orbitSettings.images, function(){ if (statusEl) statusEl.textContent = 'Orbit images loaded.'; });
+        }
+      } catch (e) { console.error(e); if (statusEl) statusEl.textContent = 'Init error: ' + e.message; }
+    }
+
+    function stopAnimation() {
+      // simplest approach: reload canvas by removing script and clearing interval via page reload of canvas only
+      if (runningScriptEl) {
+        try { document.body.removeChild(runningScriptEl); } catch(e){}
+        runningScriptEl = null;
+      }
+      // clear canvas by resetting the pinkboard element
+      const c = document.getElementById('pinkboard');
+      if (c && c.getContext) {
+        const ctx = c.getContext('2d');
+        ctx.clearRect(0,0,c.width,c.height);
+      }
+      // also try to cancel animation frames if needed by reloading page state - we keep it simple
+    }
+
+    document.getElementById('btnRun').addEventListener('click', runWithSettings);
+    document.getElementById('btnStop').addEventListener('click', stopAnimation);
+    document.getElementById('btnZoomOut').addEventListener('click', function(){
+      var el = document.getElementById('heart_scale');
+      if (!el) return;
+      var v = Number(el.value) || 1;
+      // decrease scale to make heart smaller so images are more visible
+      v = Math.max(Number(el.min) || 0.2, +(v / 1.3).toFixed(2));
+      el.value = v;
+      // re-run with new scale
+      runWithSettings();
+    });
+    document.getElementById('btnZoomIn').addEventListener('click', function(){
+      var el = document.getElementById('heart_scale');
+      if (!el) return;
+      var v = Number(el.value) || 1;
+      v = Math.min(Number(el.max) || 3, +(v * 1.3).toFixed(2));
+      el.value = v;
+      runWithSettings();
+    });
+
+    document.getElementById('btnDownload').addEventListener('click', function() {
+      const particlesSettings2 = {
+        length: Number(document.getElementById('particles_length').value),
+        duration: Number(document.getElementById('particles_duration').value),
+        velocity: Number(document.getElementById('particles_velocity').value),
+        effect: Number(document.getElementById('particles_effect').value),
+        size: Number(document.getElementById('particles_size').value)
+      };
+      const orbitSettings2 = {
+        count: Number(document.getElementById('orbit_count').value),
+        radius: Number(document.getElementById('orbit_radius').value),
+        speed: Number(document.getElementById('orbit_speed').value),
+        size: Number(document.getElementById('orbit_size').value),
+        images: document.getElementById('orbit_images').value.split(',').map(s => s.trim()).filter(s => s)
+      };
+  const heartScale2 = Number(document.getElementById('heart_scale').value) || 1;
+  const code = buildCode(particlesSettings2, orbitSettings2, heartScale2);
+      const blob = new Blob([code], {type: 'application/javascript'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || 'heart-animation.js';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
+    });
+
+    // make canvas size responsive
+    function resizeCanvas() {
+      const canvas = document.getElementById('pinkboard');
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('load', resizeCanvas);
+  </script>
+</body>
+</html>

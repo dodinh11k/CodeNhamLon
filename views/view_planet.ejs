@@ -9,6 +9,27 @@
     .code-container pre { white-space: pre-wrap; word-break: break-word; }
     /* Make planet demo taller like other rich demos */
     .planet-demo { height: 70vh; min-height: 560px; }
+    /* Hint interactive orbit with mouse */
+    .planet-demo canvas { cursor: grab; }
+    .planet-demo canvas:active { cursor: grabbing; }
+    /* Ensure any control card marked hidden will not display */
+    .control-card[hidden] { display: none !important; }
+    /* Page-scoped visual polish for controls */
+    .controls { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .control-card { border: 1px solid #e9eef3; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border-radius: 10px; padding: 12px; background: #fff; }
+    .control-card label { font-weight: 600; color: #1f2937; }
+    .control-card .hint { color: #6b7280; }
+    .control-card input[type="text"],
+    .control-card input[type="number"],
+    .control-card input[type="range"],
+    .control-card input[type="color"],
+    .control-card textarea { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 10px; background: #fff; font-size: 0.95rem; }
+    .control-card input[type="range"] { padding: 0; height: 28px; background: linear-gradient(90deg, #f3f4f6, #ffffff); }
+    .control-card input:focus,
+    .control-card textarea:focus { outline: 2px solid #93c5fd; border-color: #60a5fa; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+    /* Image URL list rows */
+    #ring_image_list .image-row { display: flex; gap: 8px; align-items: center; }
+    #ring_image_list .image-row .btn-remove-image { min-width: 64px; padding: 0.35rem 0.6rem; }
   </style>
   <!-- Three.js & OrbitControls from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
@@ -28,71 +49,297 @@
           <span id="status" style="color:#333;"></span>
         </div>
         <!-- Parameters -->
-        <div class="control-card">
+        <div class="control-card" hidden>
           <label for="stars_count">Số sao</label>
-          <input id="stars_count" type="number" min="100" max="20000" step="100" value="2000">
+          <input id="stars_count" type="number" min="100" max="20000" step="100" value="20000">
           <div class="hint">Số lượng điểm sao nền</div>
         </div>
-        <div class="control-card">
+        <div class="control-card" hidden>
           <label for="planet_radius">Bán kính hành tinh</label>
           <input id="planet_radius" type="number" min="5" max="200" step="1" value="20">
           <div class="hint">Đường kính 2R (đơn vị Three)</div>
         </div>
         <div class="control-card">
-          <label for="planet_texture">Ảnh bề mặt (URL)</label>
-          <input id="planet_texture" type="text" value="https://i.imgur.com/UYb5hMP.jpg" placeholder="https://...jpg">
+          <label for="planet_texture">Ảnh Tinh Cầu (URL)</label>
+          <input id="planet_texture" type="text" value="https://png.pngtree.com/background/20210716/original/pngtree-galaxy-galaxy-starry-night-sky-galaxy-background-picture-image_1331888.jpg" placeholder="https://...jpg">
           <div class="hint">Đường dẫn ảnh texture</div>
         </div>
-        <div class="control-card">
+        <div class="control-card" hidden>
           <label for="ring_count">Số hạt vuông</label>
-          <input id="ring_count" type="number" min="0" max="5000" step="50" value="800">
+          <input id="ring_count" type="number" min="0" max="5000" step="50" value="900">
           <div class="hint">Số box quay quanh hành tinh</div>
         </div>
-        <div class="control-card">
+        <div class="control-card" hidden>
           <label for="ring_radius">Bán kính vòng</label>
-          <input id="ring_radius" type="number" min="10" max="500" step="1" value="60">
+          <input id="ring_radius" type="number" min="10" max="1000" step="1" value="110">
           <div class="hint">Khoảng cách trung bình tới tâm</div>
         </div>
-        <div class="control-card">
+        <div class="control-card" id="card_ring_spread" hidden>
           <label for="ring_spread">Độ dày vòng</label>
-          <input id="ring_spread" type="number" min="0" max="200" step="1" value="20">
+          <input id="ring_spread" type="number" min="0" max="400" step="1" value="80">
           <div class="hint">Biên độ ngẫu nhiên ±spread</div>
         </div>
-        <div class="control-card">
-          <label for="ring_box_size">Kích thước box</label>
-          <input id="ring_box_size" type="number" min="0.2" max="10" step="0.1" value="1">
-          <div class="hint">Cỡ mỗi box vuông</div>
+        <div class="control-card" id="card_ring_box_size" hidden>
+          <label for="ring_box_size">Kích thước ảnh thiên thạch</label>
+          <input id="ring_box_size" type="number" min="0.2" max="20" step="0.1" value="4.0">
+          <div class="hint">Đơn vị thế giới (sprite billboard)</div>
         </div>
-        <div class="control-card">
+        <div class="control-card" id="ring_image_card">
+          <label>Danh sách ảnh thiên thạch</label>
+          <div id="ring_image_list"></div>
+          <button type="button" id="btnAddRingImage" class="btn btn-secondary" style="margin-top:8px;">+ Thêm ảnh</button>
+          <div class="hint">Mỗi ô là 1 URL ảnh (ưu tiên PNG nền trong suốt). Có thể thêm/xóa ô tùy ý.</div>
+        </div>
+        <div class="control-card" hidden>
           <label for="planet_speed">Tốc độ quay hành tinh</label>
           <input id="planet_speed" type="number" min="0" max="0.1" step="0.001" value="0.002">
           <div class="hint">Đơn vị rad/frame</div>
         </div>
-        <div class="control-card">
+        <div class="control-card" hidden>
           <label for="ring_speed">Tốc độ quay vòng</label>
-          <input id="ring_speed" type="number" min="0" max="0.1" step="0.001" value="0.004">
+          <input id="ring_speed" type="number" min="0" max="0.1" step="0.001" value="0.001">
           <div class="hint">Đơn vị rad/frame</div>
         </div>
-        <div class="control-card">
+        <div class="control-card" hidden>
           <label for="stars_speed">Tốc độ quay sao</label>
-          <input id="stars_speed" type="number" min="0" max="0.01" step="0.0001" value="0.0005">
+          <input id="stars_speed" type="number" min="0" max="0.01" step="0.0001" value="0.0001">
           <div class="hint">Đơn vị rad/frame</div>
         </div>
-        <div class="control-card">
+        <div class="control-card" hidden>
           <label for="camera_distance">Khoảng cách camera</label>
           <input id="camera_distance" type="number" min="20" max="1000" step="1" value="150">
           <div class="hint">Vị trí camera trục Z</div>
         </div>
-        <div class="control-card">
+        <div class="control-card" hidden>
           <label for="point_light">Cường độ đèn điểm</label>
           <input id="point_light" type="number" min="0" max="10" step="0.1" value="2">
           <div class="hint">Độ sáng nguồn đèn điểm</div>
         </div>
-        <div class="control-card">
+        <div class="control-card" hidden>
           <label for="ambient_light">Cường độ đèn nền</label>
-          <input id="ambient_light" type="number" min="0" max="2" step="0.05" value="0.25">
+          <input id="ambient_light" type="number" min="0" max="60" step="2" value="44">
           <div class="hint">Độ sáng ánh sáng môi trường</div>
         </div>
+
+        <!-- Camera / View Controls -->
+        <div class="control-card" hidden>
+          <label for="camera_azimuth">Góc ngang (°)</label>
+          <input id="camera_azimuth" type="range" min="-180" max="180" step="1" value="30">
+          <div class="hint">Xoay quanh trục Y</div>
+        </div>
+        <div class="control-card" hidden>
+          <label for="camera_polar">Góc dọc (°)</label>
+          <input id="camera_polar" type="range" min="5" max="175" step="1" value="60">
+          <div class="hint">Từ trên xuống (tránh 0°/180° để không lật)</div>
+        </div>
+        <div class="control-card" hidden>
+          <label for="camera_fov">FOV (°)</label>
+          <input id="camera_fov" type="number" min="30" max="100" step="1" value="70">
+          <div class="hint">Độ rộng góc nhìn</div>
+        </div>
+        <div class="control-card">
+          <label for="auto_rotate">Tự xoay</label>
+          <input id="auto_rotate" type="checkbox">
+          <div class="hint">Tự động quay 360°</div>
+        </div>
+        <div class="control-card">
+          <label for="fly_cam">Fly Cam</label>
+          <input id="fly_cam" type="checkbox" >
+          <div class="hint">Quay 360°, lên/xuống, phóng to/thu nhỏ như flycam</div>
+        </div>
+        <div class="control-card">
+          <label for="fly_speed">Tốc độ bay</label>
+          <input id="fly_speed" type="number" min="0.1" max="5" step="0.1" value="1">
+          <div class="hint">Hệ số tốc độ (x1, x2, ...)</div>
+        </div>
+        <div class="control-card">
+          <label for="fly_az_speed">Tốc độ quay ngang (°/giây)</label>
+          <input id="fly_az_speed" type="number" min="-180" max="180" step="1" value="20">
+          <div class="hint">Âm để quay ngược chiều</div>
+        </div>
+        <div class="control-card">
+          <label for="fly_polar_center">Tâm góc dọc (°)</label>
+          <input id="fly_polar_center" type="number" min="5" max="175" step="1" value="55">
+          <div class="hint">Góc nhìn trung bình từ trên xuống</div>
+        </div>
+        <div class="control-card">
+          <label for="fly_polar_amp">Biên độ lắc dọc (°)</label>
+          <input id="fly_polar_amp" type="number" min="0" max="80" step="1" value="20">
+          <div class="hint">0 = không lắc; lớn hơn thì lên/xuống nhiều</div>
+        </div>
+        <div class="control-card" hidden>
+          <label for="auto_rotate_speed">Tốc độ tự xoay</label>
+          <input id="auto_rotate_speed" type="number" min="-10" max="10" step="0.1" value="2">
+          <div class="hint">Độ/giây (âm để ngược)</div>
+        </div>
+        <!-- <div class="control-card">
+          <label for="invert_y">Đảo chiều kéo dọc</label>
+          <input id="invert_y" type="checkbox">
+          <div class="hint">Kéo lên sẽ nhìn lên (bật nếu đang bị ngược)</div>
+        </div> -->
+
+        <!-- Text Ring A -->
+        <div class="control-card">
+          <label for="ringA_text">Văn bản vòng A</label>
+          <input id="ringA_text" type="text" value="WELCOME TO 3D PLANET">
+          <div class="hint">Chuỗi chữ chạy quanh vòng A</div>
+        </div>
+        <div class="control-card" hidden>
+          <label for="ringA_radius">Bán kính vòng A</label>
+          <input id="ringA_radius" type="number" min="10" max="100" step="1" value="23">
+          <div class="hint">Khoảng cách chữ tới tâm</div>
+        </div>
+        <div class="control-card" hidden>
+          <label for="ringA_tilt">Độ nghiêng A (độ)</label>
+          <input id="ringA_tilt" type="number" min="-90" max="90" step="1" value="20">
+          <div class="hint">Nghiêng theo trục X</div>
+        </div>
+        <div class="control-card" hidden>
+          <label for="ringA_speed">Tốc độ vòng A</label>
+          <input id="ringA_speed" type="number" min="-0.1" max="0.1" step="0.001" value="0.005">
+          <div class="hint">rad/frame (âm để quay ngược)</div>
+        </div>
+        <div class="control-card" hidden>
+          <label for="ringA_size">Kích thước chữ A</label>
+          <input id="ringA_size" type="number" min="2" max="10" step="1" value="5">
+          <div class="hint">Đơn vị thế giới</div>
+        </div>
+        <div class="control-card" hidden>
+          <label for="ringA_color">Màu chữ A</label>
+          <input id="ringA_color" type="color" value="#ffffff">
+          <div class="hint">Màu hiển thị vòng A</div>
+        </div>
+
+        <!-- Text Ring B -->
+        <div class="control-card">
+          <label for="ringB_text">Văn bản vòng B</label>
+          <input id="ringB_text" type="text" value="HELLO DODINH 11K">
+          <div class="hint">Chuỗi chữ chạy quanh vòng B</div>
+        </div>
+        <div class="control-card" hidden>
+          <label for="ringB_radius">Bán kính vòng B</label>
+          <input id="ringB_radius" type="number" min="10" max="600" step="1" value="24">
+          <div class="hint">Khoảng cách chữ tới tâm</div>
+        </div>
+        <div class="control-card" hidden>
+          <label for="ringB_tilt">Độ nghiêng B (độ)</label>
+          <input id="ringB_tilt" type="number" min="-90" max="90" step="1" value="-15">
+          <div class="hint">Nghiêng theo trục X</div>
+        </div>
+        <div class="control-card" hidden>
+          <label for="ringB_speed">Tốc độ vòng B</label>
+          <input id="ringB_speed" type="number" min="-0.1" max="0.1" step="0.001" value="-0.004">
+          <div class="hint">rad/frame (âm để quay ngược)</div>
+        </div>
+        <div class="control-card" hidden>
+          <label for="ringB_size">Kích thước chữ B</label>
+          <input id="ringB_size" type="number" min="2" max="40" step="1" value="5">
+          <div class="hint">Đơn vị thế giới</div>
+        </div>
+        <div class="control-card" hidden>
+          <label for="ringB_color">Màu chữ B</label>
+          <input id="ringB_color" type="color" value="#ffffff">
+          <div class="hint">Màu hiển thị vòng B</div>
+        </div>
+      </div>
+
+      <!-- Panel: Cinematic FlyCam (separate from other controls) -->
+      <div class="control-card" id="cinematic_panel" style="margin-top:16px;">
+        <h3 style="margin-top:0;">Cinematic FlyCam (xoay + zoom + lắc)</h3>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+          <div>
+            <label for="cine_duration">Thời gian (giây)</label>
+            <input id="cine_duration" type="number" min="0.5" step="0.5" value="12">
+            <div class="hint">Tổng thời gian cho 1 vòng hiệu ứng</div>
+          </div>
+          <div>
+            <label for="cine_angle">Góc quay tổng (°)</label>
+            <input id="cine_angle" type="number" min="-2160" max="2160" step="30" value="600">
+            <div class="hint">Ví dụ 360° = 1 vòng, 720° = 2 vòng</div>
+          </div>
+          <div>
+            <label for="cine_start_az">Góc bắt đầu (° – trục Y)</label>
+            <input id="cine_start_az" type="number" min="-10000" max="10000" step="1" placeholder="(để trống = dùng góc hiện tại)">
+            <div class="hint">Nếu điền, cinematic sẽ bắt đầu từ góc này</div>
+          </div>
+          <div>
+            <label for="cine_end_az">Góc kết thúc (° – trục Y)</label>
+            <input id="cine_end_az" type="number" min="-10000" max="10000" step="1" placeholder="(tuỳ chọn)">
+            <div class="hint">Nếu điền, bỏ qua "Góc quay tổng" và dùng (kết thúc - bắt đầu)</div>
+          </div>
+          <div>
+            <label for="cine_start_polar">Bắt đầu góc dọc (°)</label>
+            <input id="cine_start_polar" type="number" min="5" max="175" step="1"  value="50">
+            <div class="hint">Nếu điền, cinematic sẽ dùng góc dọc này làm điểm xuất phát</div>
+          </div>
+          <div>
+            <label for="cine_end_polar">Kết thúc góc dọc (°)</label>
+            <input id="cine_end_polar" type="number" min="5" max="175" step="1"  value="86">
+            <div class="hint">Nếu điền, cinematic sẽ nội suy tới góc dọc này</div>
+          </div>
+          <div>
+            <label for="cine_start_dist">Bắt đầu khoảng cách</label>
+            <input id="cine_start_dist" type="number" min="20" max="1000" step="1"  value="200">
+            <div class="hint">Nếu điền, cinematic sẽ bắt đầu tại khoảng cách này</div>
+          </div>
+          <div>
+            <label for="cine_end_dist">Kết thúc khoảng cách</label>
+            <input id="cine_end_dist" type="number" min="20" max="1000" step="1"  value="100">
+            <div class="hint">Nếu điền, cinematic sẽ nội suy tới khoảng cách này</div>
+          </div>
+          <div>
+            <label>
+              <input id="cine_polar_bob_enable" type="checkbox"> Thêm lắc dọc
+            </label>
+            <div class="hint">Cộng thêm dao động nhẹ khi di chuyển góc dọc</div>
+          </div>
+          <div>
+            <label for="cine_polar_bob_amp">Biên độ lắc dọc (°)</label>
+            <input id="cine_polar_bob_amp" type="number" min="0" max="60" step="1" value="3">
+          </div>
+          <div>
+            <label for="cine_polar_bob_hz">Tần số lắc (Hz)</label>
+            <input id="cine_polar_bob_hz" type="number" min="0.01" max="2" step="0.01" value="0.1">
+          </div>
+          <div>
+            <label>
+              <input id="cine_dist_bob_enable" type="checkbox" > Thêm nhịp zoom
+            </label>
+            <div class="hint">Thêm nhịp zoom nhỏ khi chạy khoảng cách path</div>
+          </div>
+          <div>
+            <label for="cine_dist_bob_amp">Biên độ zoom (đơn vị khoảng cách)</label>
+            <input id="cine_dist_bob_amp" type="number" min="0" max="200" step="1" value="5">
+          </div>
+          <div>
+            <label for="cine_dist_bob_hz">Tần số zoom (Hz)</label>
+            <input id="cine_dist_bob_hz" type="number" min="0.01" max="2" step="0.01" value="0.1  ">
+          </div>
+          <div>
+            <label>
+              <input id="cine_hold_dist" type="checkbox"> Giữ khoảng cách (không zoom)
+            </label>
+            <div class="hint">Giữ nguyên khoảng cách camera trong suốt cinematic</div>
+          </div>
+          <div>
+            <label>
+              <input id="cine_hold_polar" type="checkbox" > Giữ góc dọc (không lắc)
+            </label>
+            <div class="hint">Giữ nguyên góc nhìn dọc hiện tại</div>
+          </div>
+          <div>
+            <label>
+              <input id="cine_no_resume" type="checkbox" checked> Dừng xong KHÔNG tiếp tục Fly Cam
+            </label>
+            <div class="hint">Kết thúc hiệu ứng và đứng yên tại góc nhìn đích</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button id="btnCineStart" class="btn">Bắt đầu hiệu ứng</button>
+          <button id="btnCineStop" class="btn btn-secondary">Dừng hiệu ứng</button>
+          <span id="cine_status" class="hint" style="align-self:center;"></span>
+        </div>
+        <div class="hint" style="margin-top:6px;">Hiệu ứng sẽ tự động tạm tắt Fly Cam hiện tại, xoay tròn, thu gần rồi phóng xa kèm lắc lên/xuống, sau đó khôi phục lại.</div>
       </div>
 
   <div class="demo-container planet-demo" id="planet-root"></div>
@@ -115,15 +362,60 @@
           count: Number(document.getElementById('ring_count').value) || 800,
           radius: Number(document.getElementById('ring_radius').value) || 60,
           spread: Number(document.getElementById('ring_spread').value) || 20,
-          boxSize: Number(document.getElementById('ring_box_size').value) || 1
+          boxSize: Number(document.getElementById('ring_box_size').value) || 1,
+          imageUrls: (function(){
+            const nodes = document.querySelectorAll('#ring_image_list .ring-image-input');
+            const urls = Array.from(nodes).map(el => el.value.trim()).filter(Boolean);
+            if (urls.length) return urls;
+            // Fallback: nếu còn ô cũ/textarea cũ
+            const elMany = document.getElementById('ring_image_urls');
+            const elOne = document.getElementById('ring_image_url');
+            const raw = (elMany && elMany.value) || (elOne && elOne.value) || '';
+            const backup = raw.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+            return backup;
+          })()
         },
         speed: {
           planet: Number(document.getElementById('planet_speed').value) || 0.002,
           ring: Number(document.getElementById('ring_speed').value) || 0.004,
           stars: Number(document.getElementById('stars_speed').value) || 0.0005
         },
-        camera: { distance: Number(document.getElementById('camera_distance').value) || 150 },
-        lights: { point: Number(document.getElementById('point_light').value) || 2, ambient: Number(document.getElementById('ambient_light').value) || 0.25 }
+        camera: {
+          distance: Number(document.getElementById('camera_distance').value) || 150,
+          azimuthDeg: Number(document.getElementById('camera_azimuth').value) || 30,
+          polarDeg: Number(document.getElementById('camera_polar').value) || 60,
+          fov: Number(document.getElementById('camera_fov').value) || 70,
+          autoRotate: !!document.getElementById('auto_rotate').checked,
+          autoRotateSpeed: Number(document.getElementById('auto_rotate_speed').value) || 2,
+          // Guard in case the invert_y control is commented out or missing
+          invertY: !!(document.getElementById('invert_y') && document.getElementById('invert_y').checked),
+          fly: {
+            enabled: !!document.getElementById('fly_cam').checked,
+            speed: Number(document.getElementById('fly_speed').value) || 1,
+            azimuthSpeedDegPerSec: Number(document.getElementById('fly_az_speed').value) || 20,
+            polarCenterDeg: Number(document.getElementById('fly_polar_center').value) || 55,
+            polarAmpDeg: Number(document.getElementById('fly_polar_amp').value) || 20
+          }
+        },
+        lights: { point: Number(document.getElementById('point_light').value) || 2, ambient: Number(document.getElementById('ambient_light').value) || 0.25 },
+        textRings: {
+          a: {
+            text: document.getElementById('ringA_text').value || '',
+            radius: Number(document.getElementById('ringA_radius').value) || 100,
+            tiltDeg: Number(document.getElementById('ringA_tilt').value) || 0,
+            speed: Number(document.getElementById('ringA_speed').value) || 0.005,
+            size: Number(document.getElementById('ringA_size').value) || 10,
+            color: document.getElementById('ringA_color').value || '#ffffff'
+          },
+          b: {
+            text: document.getElementById('ringB_text').value || '',
+            radius: Number(document.getElementById('ringB_radius').value) || 120,
+            tiltDeg: Number(document.getElementById('ringB_tilt').value) || 0,
+            speed: Number(document.getElementById('ringB_speed').value) || -0.004,
+            size: Number(document.getElementById('ringB_size').value) || 10,
+            color: document.getElementById('ringB_color').value || '#ffffff'
+          }
+        }
       };
     }
     document.getElementById('btnRun')?.addEventListener('click', function(){
@@ -139,6 +431,146 @@
       if (window.PlanetScene && typeof window.PlanetScene.stop === 'function') {
         window.PlanetScene.stop();
         setStatus('Đã dừng.');
+      }
+    });
+
+    // Cinematic panel wiring
+    const cineStatus = document.getElementById('cine_status');
+    document.getElementById('btnCineStart')?.addEventListener('click', function(){
+      const durationSec = Number(document.getElementById('cine_duration')?.value) || 10;
+      const rotateDeg = Number(document.getElementById('cine_angle')?.value) || 360;
+      const startAzEl = document.getElementById('cine_start_az');
+      const endAzEl = document.getElementById('cine_end_az');
+  const startPolarEl = document.getElementById('cine_start_polar');
+  const endPolarEl = document.getElementById('cine_end_polar');
+  const startDistEl = document.getElementById('cine_start_dist');
+  const endDistEl = document.getElementById('cine_end_dist');
+      const polarBobEnable = !!document.getElementById('cine_polar_bob_enable')?.checked;
+      const polarBobAmp = Number(document.getElementById('cine_polar_bob_amp')?.value);
+      const polarBobHz = Number(document.getElementById('cine_polar_bob_hz')?.value);
+  const distBobEnable = !!document.getElementById('cine_dist_bob_enable')?.checked;
+  const distBobAmp = Number(document.getElementById('cine_dist_bob_amp')?.value);
+  const distBobHz = Number(document.getElementById('cine_dist_bob_hz')?.value);
+      const holdDist = !!document.getElementById('cine_hold_dist')?.checked;
+      const holdPolar = !!document.getElementById('cine_hold_polar')?.checked;
+      const noResume = !!document.getElementById('cine_no_resume')?.checked;
+      const opts = { durationSec, rotateDeg };
+      if (startAzEl && startAzEl.value !== '') {
+        const v = Number(startAzEl.value);
+        if (!isNaN(v)) opts.startAzimuthDeg = v;
+      }
+      if (endAzEl && endAzEl.value !== '') {
+        const v = Number(endAzEl.value);
+        if (!isNaN(v)) opts.endAzimuthDeg = v;
+      }
+      if (startDistEl && startDistEl.value !== '') {
+        const v = Number(startDistEl.value);
+        if (!isNaN(v)) opts.startDistance = v;
+      }
+      if (endDistEl && endDistEl.value !== '') {
+        const v = Number(endDistEl.value);
+        if (!isNaN(v)) opts.endDistance = v;
+      }
+      if (startPolarEl && startPolarEl.value !== '') {
+        const v = Number(startPolarEl.value);
+        if (!isNaN(v)) opts.startPolarDeg = v;
+      }
+      if (endPolarEl && endPolarEl.value !== '') {
+        const v = Number(endPolarEl.value);
+        if (!isNaN(v)) opts.endPolarDeg = v;
+      }
+      if (polarBobEnable) {
+        if (!isNaN(polarBobAmp)) opts.polarBobAmpDeg = polarBobAmp;
+        if (!isNaN(polarBobHz)) opts.polarBobHz = polarBobHz;
+      }
+      if (distBobEnable) {
+        if (!isNaN(distBobAmp)) opts.distanceBobAmp = distBobAmp;
+        if (!isNaN(distBobHz)) opts.distanceBobHz = distBobHz;
+      }
+      // Distance/polar/resume preferences
+      opts.distanceMode = holdDist ? 'hold' : 'inOut';
+      // If user specifies start/end polar, we will ignore hold/bob and use 'path' inside startCinematic.
+      opts.polarMode = holdPolar ? 'hold' : 'bob';
+      opts.resumeFlyAfter = !noResume;
+      if (window.PlanetScene && typeof window.PlanetScene.startCinematic === 'function') {
+        window.PlanetScene.startCinematic(opts);
+        if (cineStatus) cineStatus.textContent = 'Đang chạy cinematic...';
+      }
+    });
+    document.getElementById('btnCineStop')?.addEventListener('click', function(){
+      if (window.PlanetScene && typeof window.PlanetScene.stopCinematic === 'function') {
+        window.PlanetScene.stopCinematic();
+        if (cineStatus) cineStatus.textContent = 'Đã dừng.';
+      }
+    });
+
+    // Live camera controls: update view immediately when sliders change
+  const cameraInputs = ['camera_azimuth','camera_polar','camera_fov','camera_distance','auto_rotate','auto_rotate_speed','fly_cam','fly_speed','fly_az_speed','fly_polar_center','fly_polar_amp'];
+    cameraInputs.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const eventName = el.tagName === 'INPUT' && el.type === 'range' ? 'input' : 'change';
+      el.addEventListener(eventName, function(){
+        if (!window.PlanetScene || typeof window.PlanetScene.setCameraParams !== 'function') return;
+        const cam = {
+          azimuthDeg: Number(document.getElementById('camera_azimuth').value) || 0,
+          polarDeg: Number(document.getElementById('camera_polar').value) || 60,
+          fov: Number(document.getElementById('camera_fov').value) || 70,
+          distance: Number(document.getElementById('camera_distance').value) || 150,
+          autoRotate: !!document.getElementById('auto_rotate').checked,
+          autoRotateSpeed: Number(document.getElementById('auto_rotate_speed').value) || 2,
+          fly: {
+            enabled: !!document.getElementById('fly_cam').checked,
+            speed: Number(document.getElementById('fly_speed').value) || 1,
+            azimuthSpeedDegPerSec: Number(document.getElementById('fly_az_speed').value) || 20,
+            polarCenterDeg: Number(document.getElementById('fly_polar_center').value) || 55,
+            polarAmpDeg: Number(document.getElementById('fly_polar_amp').value) || 20
+          }
+        };
+        window.PlanetScene.setCameraParams(cam);
+      });
+    });
+
+    // Auto-start scene so you can drag/zoom ngay khi vào trang
+    // Helper: quản lý danh sách URL ảnh thiên thạch
+    function addRingImageRow(url){
+      const list = document.getElementById('ring_image_list');
+      if (!list) return;
+      const row = document.createElement('div');
+      row.className = 'image-row';
+      row.style.display = 'flex';
+      row.style.gap = '8px';
+      row.style.margin = '4px 0';
+      row.innerHTML = '<input type="text" class="ring-image-input" placeholder="https://...png" style="flex:1" />' +
+                      '<button type="button" class="btn btn-secondary btn-remove-image">Xóa</button>';
+      list.appendChild(row);
+      if (url) row.querySelector('input').value = url;
+    }
+    document.getElementById('btnAddRingImage')?.addEventListener('click', function(){ addRingImageRow(''); });
+    document.getElementById('ring_image_list')?.addEventListener('click', function(e){
+      const t = e.target;
+      if (t && t.classList.contains('btn-remove-image')) {
+        const row = t.closest('.image-row');
+        if (row) row.remove();
+      }
+    });
+
+    // Khởi tạo mặc định 2 ô nếu chưa có dữ liệu nào
+    (function initDefaultImages(){
+      const list = document.getElementById('ring_image_list');
+      if (!list) return;
+      const existing = list.querySelectorAll('.ring-image-input');
+      if (existing.length === 0) {
+        addRingImageRow('https://kenh14cdn.com/zoom/700_438/2018/10/19/photo1539964790116-1539964790327547857198.jpg');
+        addRingImageRow('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1RXZUcbA51xBWnV_Wk7Jku_O2CQIpkRKbtQ&s');
+      }
+    })();
+
+    window.addEventListener('load', function(){
+      const settings = collectSettings();
+      if (window.PlanetScene && typeof window.PlanetScene.start === 'function') {
+        window.PlanetScene.start(settings);
+        setStatus('Đang chạy...');
       }
     });
   </script>
